@@ -1,7 +1,7 @@
 body {
     background-color: #f4f4f4;
     margin-top: 50px;
-    font-family: 'Lato';
+    font-family: 'Lato', serif;
 }
 
 .item {
@@ -36,4 +36,62 @@ body {
 
 button:focus {
     border: 1px solid #333;
+}
+
+/* 编辑模式样式 */
+.item.editing {
+    background-color: #f8f9fa;
+    border: 2px solid #007bff;
+    box-shadow: 0 0 1em #007bff;
+}
+
+.item.editing .form-control {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.item.editing .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* 编辑按钮样式 */
+.name:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-radius: 3px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* 按钮间距 */
+.me-1 {
+    margin-right: 0.25rem !important;
+}
+
+/* 搜索框样式 */
+.search-box {
+    margin-bottom: 20px;
+}
+
+.search-box .input-group-text {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+    color: #6c757d;
+}
+
+.search-box .form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.search-box .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+/* 搜索结果 */
+.text-muted {
+    color: #6c757d !important;
+    font-style: italic;
+    padding: 20px;
 }

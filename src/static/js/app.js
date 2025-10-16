@@ -13,6 +13,7 @@ function App() {
 
 function TodoListCard() {
     const [items, setItems] = React.useState(null);
+    const [searchTerm, setSearchTerm] = React.useState('');
 
     React.useEffect(() => {
         fetch('/items')
@@ -47,15 +48,24 @@ function TodoListCard() {
         [items],
     );
 
+    // 过滤项目
+    const filteredItems = items ? items.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) : [];
+
     if (items === null) return 'Loading...';
 
     return (
         <React.Fragment>
             <AddItemForm onNewItem={onNewItem} />
-            {items.length === 0 && (
-                <p className="text-center">No items yet! Add one above!</p>
+            <SearchBox searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+            {filteredItems.length === 0 && items.length > 0 && (
+                <p className="text-center text-muted">没有找到匹配的待办事项。</p>
             )}
-            {items.map(item => (
+            {filteredItems.length === 0 && items.length === 0 && (
+                <p className="text-center">还没有待办事项！请在上面添加一个！</p>
+            )}
+            {filteredItems.map(item => (
                 <ItemDisplay
                     item={item}
                     key={item.id}
@@ -114,8 +124,49 @@ function AddItemForm({ onNewItem }) {
     );
 }
 
+function SearchBox({ searchTerm, onSearchChange }) {
+    const { Form, InputGroup, Button } = ReactBootstrap;
+
+    const clearSearch = () => {
+        onSearchChange('');
+    };
+
+    return (
+        <Form className="search-box">
+            <InputGroup>
+                <InputGroup.Prepend>
+                    <InputGroup.Text>
+                        <i className="fa fa-search" />
+                    </InputGroup.Text>
+                </InputGroup.Prepend>
+                <Form.Control
+                    value={searchTerm}
+                    onChange={e => onSearchChange(e.target.value)}
+                    type="text"
+                    placeholder="搜索待办事项..."
+                    aria-describedby="search-addon"
+                />
+                {searchTerm && (
+                    <InputGroup.Append>
+                        <Button
+                            variant="outline-secondary"
+                            onClick={clearSearch}
+                            aria-label="Clear search"
+                        >
+                            <i className="fa fa-times" />
+                        </Button>
+                    </InputGroup.Append>
+                )}
+            </InputGroup>
+        </Form>
+    );
+}
+
 function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
-    const { Container, Row, Col, Button } = ReactBootstrap;
+    const { Container, Row, Col, Button, Form, InputGroup } = ReactBootstrap;
+    const [isEditing, setIsEditing] = React.useState(false);
+    const [editName, setEditName] = React.useState(item.name);
+    const [isUpdating, setIsUpdating] = React.useState(false);
 
     const toggleCompletion = () => {
         fetch(`/items/${item.id}`, {
@@ -135,6 +186,105 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
             onItemRemoval(item),
         );
     };
+
+    const startEditing = () => {
+        setIsEditing(true);
+        setEditName(item.name);
+    };
+
+    const cancelEditing = () => {
+        setIsEditing(false);
+        setEditName(item.name);
+    };
+
+    const saveEdit = () => {
+        if (!editName.trim()) return;
+
+        setIsUpdating(true);
+        fetch(`/items/${item.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                name: editName.trim(),
+                completed: item.completed,
+            }),
+            headers: { 'Content-Type': 'application/json' },
+        })
+            .then(r => r.json())
+            .then(updatedItem => {
+                onItemUpdate(updatedItem);
+                setIsEditing(false);
+                setIsUpdating(false);
+            })
+            .catch(() => {
+                setIsUpdating(false);
+            });
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            cancelEditing();
+        }
+    };
+
+    if (isEditing) {
+        return (
+            <Container fluid className={`item editing ${item.completed && 'completed'}`}>
+                <Row>
+                    <Col xs={1} className="text-center">
+                        <Button
+                            className="toggles"
+                            size="sm"
+                            variant="link"
+                            onClick={toggleCompletion}
+                            aria-label={
+                                item.completed
+                                    ? 'Mark item as incomplete'
+                                    : 'Mark item as complete'
+                            }
+                        >
+                            <i
+                                className={`far ${
+                                    item.completed ? 'fa-check-square' : 'fa-square'
+                                }`}
+                            />
+                        </Button>
+                    </Col>
+                    <Col xs={8}>
+                        <InputGroup size="sm">
+                            <Form.Control
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                onKeyDown={handleKeyPress}
+                                disabled={isUpdating}
+                                autoFocus
+                            />
+                        </InputGroup>
+                    </Col>
+                    <Col xs={3} className="text-center">
+                        <Button
+                            size="sm"
+                            variant="success"
+                            onClick={saveEdit}
+                            disabled={!editName.trim() || isUpdating}
+                            className="me-1"
+                        >
+                            <i className="fa fa-check" />
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={cancelEditing}
+                            disabled={isUpdating}
+                        >
+                            <i className="fa fa-times" />
+                        </Button>
+                    </Col>
+                </Row>
+            </Container>
+        );
+    }
 
     return (
         <Container fluid className={`item ${item.completed && 'completed'}`}>
@@ -158,10 +308,19 @@ function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
                         />
                     </Button>
                 </Col>
-                <Col xs={10} className="name">
+                <Col xs={9} className="name" onDoubleClick={startEditing} style={{ cursor: 'pointer' }}>
                     {item.name}
                 </Col>
-                <Col xs={1} className="text-center remove">
+                <Col xs={2} className="text-center">
+                    <Button
+                        size="sm"
+                        variant="link"
+                        onClick={startEditing}
+                        aria-label="Edit Item"
+                        className="me-1"
+                    >
+                        <i className="fa fa-edit text-primary" />
+                    </Button>
                     <Button
                         size="sm"
                         variant="link"
